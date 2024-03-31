@@ -38,24 +38,28 @@ def read_passwords(file, hosts, names, passwords_file):
     
     with open(file, "r") as f:
         
-        ok = False
         
         for line in f.readlines():
             
             line = line.strip()
             
-            if (not ok) and (":" not in line):
-                print("Format not recognized:", file)
+            separators = [":", ";", "None"]
+            for separator in separators:
+                if separator in line:
+                    break 
+            if separator == "None":
+                print("Format not recognized:", line)
                 return False
-            else:
-                ok = True
-                
+            
             try:
                 colon = line.index(":")
                 name, password = line[0:colon], line[colon+1:]
+                if "@" not in name: 
+                    print("\n@ not found:", line) 
+                    continue
                 name, host = name.split("@")
             except Exception as e:
-                print("ERROR: ", str(e))
+                print("\nERROR: ", str(e))
                 print("Line:", line)
                 continue
             
@@ -65,7 +69,9 @@ def read_passwords(file, hosts, names, passwords_file):
             with open(passwords_file, "a") as f_pass:
                 f_pass.write(str(idx_name)
                              +"@"+str(idx_host)+":"+password+"\n")
-                
+     
+    return True
+
             
 def get_val(string, dic):
     
