@@ -34,6 +34,14 @@ def save_file(file, content):
             f.write(item)
             f.write("\n")
 
+def find_separator(separators, line):
+    
+    for separator in separators:
+        if separator in line:
+            return separator
+
+    return False  
+    
 def read_passwords(file, hosts, names, passwords_file):
     
     with open(file, "r") as f:
@@ -43,21 +51,19 @@ def read_passwords(file, hosts, names, passwords_file):
             
             line = line.strip()
             
-            separators = [":", ";", "None"]
-            for separator in separators:
-                if separator in line:
-                    break 
-            if separator == "None":
-                print("Format not recognized:", line)
+            if not (sep := find_separator([":", ";"], line)):
                 return False
             
             try:
-                colon = line.index(":")
+                colon = line.index(sep)
                 name, password = line[0:colon], line[colon+1:]
-                if "@" not in name: 
-                    print("\n@ not found:", line) 
-                    continue
-                name, host = name.split("@")
+                
+                if sep := find_separator(["@",","," "]):
+    
+                    name, host = name.split(sep)
+                else:
+                    host=name
+                    
             except Exception as e:
                 print("\nERROR: ", str(e))
                 print("Line:", line)
