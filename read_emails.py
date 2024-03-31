@@ -16,6 +16,7 @@ FOLDERS = "folders.data"
 HOSTS = "hosts.data"
 NAMES = "names.data"
 PASSWORDS = "passwords.data"
+ERRORS = "errors.data"
 
 def read_file(file):
     
@@ -37,12 +38,20 @@ def read_passwords(file, hosts, names, passwords_file):
     
     with open(file, "r") as f:
         
+        ok = False
+        
         for line in f.readlines():
             
             line = line.strip()
             
+            if (not ok) and (":" not in line):
+                print("Format not recognized:", file)
+                return False
+            else:
+                ok = True
+                
             name, password = line.split(":")
-            host, name = name.split("@")
+            name, host = name.split("@")
             
             idx_name = get_val(name, names)
             idx_host = get_val(host, hosts)
@@ -68,18 +77,27 @@ def main():
     folders = set(read_file(FOLDERS))
     hosts = as_dict(read_file(HOSTS))
     names = as_dict(read_file(NAMES))
+    errors = []
             
     for file in files:
         
         print(".", end="")
         path_, file_ = path.split(file)
         if path_ in folders: continue
-        folders.add(path_)
         
-        read_passwords(file, hosts, names, PASSWORDS)
+        try:
+            if not read_passwords(file, hosts, names, PASSWORDS):
+                errors.append(file)
+                continue
+            folders.add(path_)
+        except Exception as e:
+            print("\nError reading file:", file)
+            print(str(e))
         
         
     save_file(FOLDERS, folders)  
+    save_file(HOSTS, hosts.keys())
+    save_file(NAMES, names.keys())
     
 if __name__ == "__main__": 
     
