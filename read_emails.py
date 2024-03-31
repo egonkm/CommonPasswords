@@ -11,6 +11,7 @@ Created on Sun Mar 31 22:29:38 2024
 
 from glob import glob
 from os import path
+from sys import stderr
 
 FOLDERS = "folders.data"
 HOSTS = "hosts.data"
@@ -40,6 +41,8 @@ def find_separator(separators, line):
         if separator in line:
             return separator
 
+    print("Separator not found:", line, file=stderr)
+    
     return False  
     
 def read_passwords(file, hosts, names, passwords_file):
@@ -58,15 +61,15 @@ def read_passwords(file, hosts, names, passwords_file):
                 colon = line.index(sep)
                 name, password = line[0:colon], line[colon+1:]
                 
-                if sep := find_separator(["@",","," "]):
+                if sep := find_separator(["@",","," "], name):
     
                     name, host = name.split(sep)
                 else:
                     host=name
                     
             except Exception as e:
-                print("\nERROR: ", str(e))
-                print("Line:", line)
+                print("\nERROR: ", str(e), file=stderr)
+                print("Line:", line, file=stderr)
                 continue
             
             idx_name = get_val(name, names)
@@ -89,6 +92,7 @@ def get_val(string, dic):
 def as_dict(a_list):
     
     return {element : idx+1 for idx,element in enumerate(a_list)}
+
 def main():
     
     files = glob("../**/*.txt")
@@ -99,7 +103,7 @@ def main():
             
     for file in files:
         
-        print(".", end="")
+        print(file) 
         path_, file_ = path.split(file)
         if path_ in folders: continue
         
@@ -109,7 +113,7 @@ def main():
                 continue
             folders.add(path_)
         except Exception as e:
-            print("\nError reading file:", file)
+            print("***Error reading file")
             print(str(e))
         
         
