@@ -50,8 +50,14 @@ def read_passwords(file, hosts, names, passwords_file):
             else:
                 ok = True
                 
-            name, password = line.split(":")
-            name, host = name.split("@")
+            try:
+                colon = line.index(":")
+                name, password = line[0:colon], line[colon+1:]
+                name, host = name.split("@")
+            except Exception as e:
+                print("ERROR: ", str(e))
+                print("Line:", line)
+                continue
             
             idx_name = get_val(name, names)
             idx_host = get_val(host, hosts)
@@ -95,10 +101,11 @@ def main():
             print(str(e))
         
         
-    save_file(FOLDERS, folders)  
-    save_file(HOSTS, hosts.keys())
-    save_file(NAMES, names.keys())
-    
+        save_file(FOLDERS, folders)  
+        save_file(HOSTS, hosts.keys())
+        save_file(NAMES, names.keys())
+        save_file(ERRORS, errors)
+        
 if __name__ == "__main__": 
     
     main()
