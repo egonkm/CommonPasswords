@@ -11,7 +11,7 @@ Created on Sun Mar 31 22:29:38 2024
 
 from glob import glob
 from os import path
-from sys import stderr
+from sys import stderr, getsizeof
 
 FOLDERS = "folders.data"
 HOSTS = "hosts.data"
@@ -49,33 +49,50 @@ def read_passwords(file, hosts, names, passwords_file):
     
     with open(file, "r") as f:
         
-        
-        for line in f.readlines():
+        with open(passwords_file, "a") as f_pass:
             
-            line = line.strip()
-            
-            if not (sep := find_separator([":", ";"], line)):
-                return False
-            
-            try:
-                colon = line.index(sep)
-                name, password = line[0:colon], line[colon+1:]
+            for line in f.readlines():
                 
-                if sep := find_separator(["@",","," "], name):
-    
-                    name, host = name.split(sep)
-                else:
-                    host=name
+                line = line.strip()
+                
+                if not line: continue
+                
+                skip = False
+                
+                for ignore in ["РІР‚ВР Р"]:
                     
-            except Exception as e:
-                print("\nERROR: ", str(e), file=stderr)
-                print("Line:", line, file=stderr)
-                continue
-            
-            idx_name = get_val(name, names)
-            idx_host = get_val(host, hosts)
-            
-            with open(passwords_file, "a") as f_pass:
+                    if ignore in line:
+                        skip = True
+                        break
+                
+                if skip: continue
+                
+                if not (sep := find_separator([":", ";"], line)):
+                    return False
+                
+                try:
+                    idx = line.index(sep)
+                    name, password = line[0:idx].strip(), line[idx+1:].strip()
+                    
+                    if not name:
+                        print("Incomplete line: ", line, file=stderr)
+                        continue
+                    
+                    if sep := find_separator(["@",","," "], name):
+        
+                        name, host = name.split(sep)
+                    else:
+                        host=name
+                        
+                except Exception as e:
+                    print("\nERROR: ", str(e), file=stderr)
+                    print("Line:", line, file=stderr)
+                    continue
+                
+                idx_name = get_val(name, names)
+                idx_host = get_val(host, hosts)
+                
+           
                 f_pass.write(str(idx_name)
                              +"@"+str(idx_host)+":"+password+"\n")
      
@@ -93,9 +110,14 @@ def as_dict(a_list):
     
     return {element : idx+1 for idx,element in enumerate(a_list)}
 
+K = 1024
+M = K*K
+
 def main():
     
     files = glob("../**/*.txt")
+    print("FILES:", len(files))
+    
     folders = set(read_file(FOLDERS))
     hosts = as_dict(read_file(HOSTS))
     names = as_dict(read_file(NAMES))
@@ -103,7 +125,7 @@ def main():
             
     for file in files:
         
-        print(file) 
+        print(file, getsizeof(hosts)//M, getsizeof(names)//M)
         path_, file_ = path.split(file)
         if path_ in folders: continue
         
