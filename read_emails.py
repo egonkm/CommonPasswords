@@ -13,16 +13,23 @@ from glob import glob
 from os import path
 from sys import stderr, getsizeof
 import psutil
+import sqlite3
 
 FOLDERS = "folders.data"
-HOSTS = "hosts.data"
-NAMES = "names.data"
-PASSWORDS = "passwords.data"
-ERRORS = "errors.data"
 
+
+def create_tables(conn):
+    
+    conn.execute("drop table names")
+    conn.execute("drop table hosts")
+    conn.execute("drop table passwords")
+    conn.execute("create table names (id integer primary key autoincrement, name text)")
+    conn.execute("create table hosts ( id integer primary key autoincrement, host text)")
+    conn.execute("create table passwords (host integer, name integer, password text, primary key (host, name))")
+    
 def read_file(file):
     
-    if not path.exists(file):
+    if not path .exists(file):
         return []
     
     with open(file, "r") as f:
@@ -41,17 +48,43 @@ def find_separator(separators, line):
     for separator in separators:
         if separator in line:
             return separator
-
-    print("Separator not found:", line, file=stderr)
     
     return False  
     
-def read_passwords(file, hosts, names, passwords_file):
+def split_line(line):
+    
+    if not (sep := find_separator([":", ";"], line)):
+        print("Separator not found:", line, file=stderr)               
+        return None, None, None
+    
+    try:
+        idx = line.index(sep)
+        name, password = line[0:idx].strip(), line[idx+1:].strip()
+        
+        if not name:
+            print("Incomplete line: ", line, file=stderr)
+            return 0,0,0
+        
+        if sep := find_separator(["@",","," "], name):
+
+            name, host = name.split(sep)
+        else:
+            print("Separator not found in name:", line, file=stderr)                   
+            host=name
+            
+    except Exception as e:
+        print("\nERROR: ", str(e), file=stderr)
+        print("Line:", line, file=stderr)
+        return None, None, None
+    
+    return name, host, password
+            
+            
+def read_passwords(file, conn):
     
     with open(file, "r") as f:
         
         
-            
         for line in f:
             
             line = line.strip()
@@ -68,35 +101,15 @@ def read_passwords(file, hosts, names, passwords_file):
             
             if skip: continue
             
-            if not (sep := find_separator([":", ";"], line)):
-                return False
+            name, host, password = split_line(line)
             
-            try:
-                idx = line.index(sep)
-                name, password = line[0:idx].strip(), line[idx+1:].strip()
-                
-                if not name:
-                    print("Incomplete line: ", line, file=stderr)
-                    continue
-                
-                if sep := find_separator(["@",","," "], name):
-    
-                    name, host = name.split(sep)
-                else:
-                    host=name
-                    
-            except Exception as e:
-                print("\nERROR: ", str(e), file=stderr)
-                print("Line:", line, file=stderr)
-                continue
+            if name is None: continue
+        
             
-            idx_name = get_val(name, names)
-            idx_host = get_val(host, hosts)
+            idx_name = conn.execute("")
+            idx_host = 
             
        
-            with open(passwords_file, "a") as f_pass:
-                f_pass.write(str(idx_name)
-                         +"@"+str(idx_host)+":"+password+"\n")
  
     return True
 
@@ -118,13 +131,11 @@ MIN_RAM = 512*M
 
 def main():
     
+    conn = sqlite3.connect("emails.db")
+    folders = read_file()(FOLDERS)
     files = glob("../**/*.txt")
     print("FILES:", len(files))
-    
-    folders = set(read_file(FOLDERS))
-    hosts = as_dict(read_file(HOSTS))
-    names = as_dict(read_file(NAMES))
-    errors = []
+
     count = 1
     
     for file in files:
@@ -133,8 +144,7 @@ def main():
             print("Running out of ram!")
             break
         
-        print(count,"/", len(files), file,
-              getsizeof(hosts)//M, getsizeof(names)//M,
+        print(count,"/", len(files), file,              
               psutil.virtual_memory().free//M)
         
         count += 1
@@ -143,20 +153,16 @@ def main():
         if path_ in folders: continue
         
         try:
-            if not read_passwords(file, hosts, names, PASSWORDS):
-                errors.append(file)
+            if not read_passwords(file, conn):
                 continue
             folders.add(path_)
         except Exception as e:
-            print("***Error reading file")
-            print(str(e))
+            print("***Error reading file", file=stderr)
+            print(str(e), file=stderr)
         
-        
-        save_file(FOLDERS, folders)  
-        save_file(HOSTS, hosts.keys())
-        save_file(NAMES, names.keys())
-        save_file(ERRORS, errors)
+    save_file(FOLDERS, folders)  
+    conn.close() 
         
 if __name__ == "__main__": 
-    
-    main()
+    pass 
+    # main()
