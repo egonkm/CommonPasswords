@@ -12,6 +12,7 @@ Created on Sun Mar 31 22:29:38 2024
 from glob import glob
 from os import path
 from sys import stderr, getsizeof
+import psutil
 
 FOLDERS = "folders.data"
 HOSTS = "hosts.data"
@@ -112,8 +113,9 @@ def as_dict(a_list):
 
 K = 1024
 M = K*K
+MIN_RAM = 512*M
 
-def main():
+def main(limit=1000):
     
     files = glob("../**/*.txt")
     print("FILES:", len(files))
@@ -122,10 +124,22 @@ def main():
     hosts = as_dict(read_file(HOSTS))
     names = as_dict(read_file(NAMES))
     errors = []
-            
+    count = 1
+    
     for file in files:
+    
+        if psutil.virtual_memory().free<MIN_RAM:
+            print("Running out of ram!")
+            break
         
-        print(file, getsizeof(hosts)//M, getsizeof(names)//M)
+    
+        if count>limit: 
+            print("limit reached")
+            break
+        
+        print(count,"/", len(files), file, getsizeof(hosts)//M, getsizeof(names)//M)
+        count += 1
+        
         path_, file_ = path.split(file)
         if path_ in folders: continue
         
