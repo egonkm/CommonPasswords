@@ -50,53 +50,54 @@ def read_passwords(file, hosts, names, passwords_file):
     
     with open(file, "r") as f:
         
-        with open(passwords_file, "a") as f_pass:
-            
-            for line in f.readlines():
-                
-                line = line.strip()
-                
-                if not line: continue
-                
-                skip = False
-                
-                for ignore in ["РІР‚ВР Р"]:
-                    
-                    if ignore in line:
-                        skip = True
-                        break
-                
-                if skip: continue
-                
-                if not (sep := find_separator([":", ";"], line)):
-                    return False
-                
-                try:
-                    idx = line.index(sep)
-                    name, password = line[0:idx].strip(), line[idx+1:].strip()
-                    
-                    if not name:
-                        print("Incomplete line: ", line, file=stderr)
-                        continue
-                    
-                    if sep := find_separator(["@",","," "], name):
         
-                        name, host = name.split(sep)
-                    else:
-                        host=name
-                        
-                except Exception as e:
-                    print("\nERROR: ", str(e), file=stderr)
-                    print("Line:", line, file=stderr)
+            
+        for line in f:
+            
+            line = line.strip()
+            
+            if not line: continue
+            
+            skip = False
+            
+            for ignore in ["РІР‚ВР Р"]:
+                
+                if ignore in line:
+                    skip = True
+                    break
+            
+            if skip: continue
+            
+            if not (sep := find_separator([":", ";"], line)):
+                return False
+            
+            try:
+                idx = line.index(sep)
+                name, password = line[0:idx].strip(), line[idx+1:].strip()
+                
+                if not name:
+                    print("Incomplete line: ", line, file=stderr)
                     continue
                 
-                idx_name = get_val(name, names)
-                idx_host = get_val(host, hosts)
-                
-           
+                if sep := find_separator(["@",","," "], name):
+    
+                    name, host = name.split(sep)
+                else:
+                    host=name
+                    
+            except Exception as e:
+                print("\nERROR: ", str(e), file=stderr)
+                print("Line:", line, file=stderr)
+                continue
+            
+            idx_name = get_val(name, names)
+            idx_host = get_val(host, hosts)
+            
+       
+            with open(passwords_file, "a") as f_pass:
                 f_pass.write(str(idx_name)
-                             +"@"+str(idx_host)+":"+password+"\n")
-     
+                         +"@"+str(idx_host)+":"+password+"\n")
+ 
     return True
 
             
@@ -115,7 +116,7 @@ K = 1024
 M = K*K
 MIN_RAM = 512*M
 
-def main(limit=1000):
+def main():
     
     files = glob("../**/*.txt")
     print("FILES:", len(files))
@@ -132,12 +133,10 @@ def main(limit=1000):
             print("Running out of ram!")
             break
         
-    
-        if count>limit: 
-            print("limit reached")
-            break
+        print(count,"/", len(files), file,
+              getsizeof(hosts)//M, getsizeof(names)//M,
+              psutil.virtual_memory().free//M)
         
-        print(count,"/", len(files), file, getsizeof(hosts)//M, getsizeof(names)//M)
         count += 1
         
         path_, file_ = path.split(file)
