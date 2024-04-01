@@ -16,17 +16,23 @@ import psutil
 import sqlite3
 
 FOLDERS = "folders.data"
+DB = "emails.db"
+
+def connect_db(file, reset=False):
+    
+    conn = sqlite3.connect(file)
+    
+    if reset:
+        conn.execute("drop table if exists names ")
+        conn.execute("drop table if exists hosts")
+        conn.execute("drop table if exists passwords")
+        conn.execute("create table names (id integer primary key autoincrement, name text)")
+        conn.execute("create table hosts ( id integer primary key autoincrement, host text)")
+        conn.execute("create table passwords (host integer, name integer, password text, primary key (host, name))")
+     
+    return conn
 
 
-def create_tables(conn):
-    
-    conn.execute("drop table names")
-    conn.execute("drop table hosts")
-    conn.execute("drop table passwords")
-    conn.execute("create table names (id integer primary key autoincrement, name text)")
-    conn.execute("create table hosts ( id integer primary key autoincrement, host text)")
-    conn.execute("create table passwords (host integer, name integer, password text, primary key (host, name))")
-    
 def read_file(file):
     
     if not path .exists(file):
@@ -103,23 +109,40 @@ def read_passwords(file, conn):
             
             name, host, password = split_line(line)
             
-            if name is None: continue
-        
+            if name is None: continue    
             
-            idx_name = conn.execute("")
-            idx_host = 
+            idx_name = get_val(conn, "names", "name", name)
+            idx_host = get_val(conn, "hosts", "host", host) 
             
-       
- 
+            conn.execute(
+                "insert into passwords values (?,?,?)",
+                (idx_host, idx_name, password))
+            
+    conn.commit()
+            
     return True
 
             
-def get_val(string, dic):
+def get_val(conn, table, field, val):
     
-    if string not in dic:
-        dic[string] = len(dic)+1
+    result = conn.execute(
+        "select * from %s where %s=?" % (table, field),
+        (val,)
+    ).fetchone()
+
+    if result is None:
+        
+        conn.execute(
+            "insert into %s values (NULL, ?)" % table,
+            (val,)
+        )          
+        result = conn.execute(
+            "select * from %s where %s=?" % (table, field),
+            (val,)
+        )
+        
+    return result.fetchone()[0]
     
-    return dic[string]
 
 def as_dict(a_list):
     
@@ -131,38 +154,41 @@ MIN_RAM = 512*M
 
 def main():
     
-    conn = sqlite3.connect("emails.db")
-    folders = read_file()(FOLDERS)
+    folders = read_file(FOLDERS) 
     files = glob("../**/*.txt")
     print("FILES:", len(files))
-
     count = 1
+
+    with connect_db(DB, True) as conn:
+
     
-    for file in files:
-    
-        if psutil.virtual_memory().free<MIN_RAM:
-            print("Running out of ram!")
-            break
+        for file in files:
         
-        print(count,"/", len(files), file,              
-              psutil.virtual_memory().free//M)
-        
-        count += 1
-        
-        path_, file_ = path.split(file)
-        if path_ in folders: continue
-        
-        try:
-            if not read_passwords(file, conn):
+            if psutil.virtual_memory().free<MIN_RAM:
+                print("Running out of ram!")
+                break
+            
+            print(count,"/", len(files), file,              
+                  psutil.virtual_memory().free//M)
+            
+            count += 1
+            
+            path_, file_ = path.split(file)
+            if path_ in folders: 
+                print("Skipping folder.") 
                 continue
-            folders.add(path_)
-        except Exception as e:
-            print("***Error reading file", file=stderr)
-            print(str(e), file=stderr)
+            
+            try:
+                if not read_passwords(file, conn):
+                    continue
+                folders.add(path_)
+            except Exception as e:
+                print("***Error reading file", file=stderr)
+                print(str(e), file=stderr)
         
     save_file(FOLDERS, folders)  
-    conn.close() 
+ 
         
 if __name__ == "__main__": 
     pass 
-    # main()
+    main()
