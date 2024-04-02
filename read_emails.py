@@ -15,7 +15,7 @@ from sys import stderr, getsizeof
 import psutil
 import sqlite3
 
-FOLDERS = "folders.data"
+FILES_READ = "files_read.data"
 DB = "emails.db"
 
 def connect_db(file, reset=False):
@@ -49,6 +49,12 @@ def save_file(file, content):
             f.write(item)
             f.write("\n")
 
+def add_to_file(file, item):
+    
+    with open(file, "a") as f:
+            f.write(item)
+            f.write("\n")
+            
 def find_separator(separators, line):
     
     for separator in separators:
@@ -75,8 +81,8 @@ def split_line(line):
 
             name, host = name.split(sep)
         else:
-            print("Separator not found in name:", line, file=stderr)                   
-            host=name
+            # print("Separator not found in name:", line, file=stderr)                   
+            host="unknown"
             
     except Exception as e:
         print("\nERROR: ", str(e), file=stderr)
@@ -114,6 +120,10 @@ def read_passwords(file, conn):
             idx_name = get_val(conn, "names", "name", name)
             idx_host = get_val(conn, "hosts", "host", host) 
             
+            if not (idx_name and idx_host):
+                print("Error recovering values:", line)
+                continue
+            
             conn.execute(
                 "insert into passwords values (?,?,?)",
                 (idx_host, idx_name, password))
@@ -128,7 +138,7 @@ def get_val(conn, table, field, val):
     result = conn.execute(
         "select * from %s where %s=?" % (table, field),
         (val,)
-    ).fetchone()
+    ).fetchone() 
 
     if result is None:
         
@@ -139,9 +149,13 @@ def get_val(conn, table, field, val):
         result = conn.execute(
             "select * from %s where %s=?" % (table, field),
             (val,)
-        )
+        ).fetchone()
         
-    return result.fetchone()[0]
+        if result is None:
+            print("DOuble none")
+            return None  
+        
+    return result[0]
     
 
 def as_dict(a_list):
@@ -150,16 +164,16 @@ def as_dict(a_list):
 
 K = 1024
 M = K*K
-MIN_RAM = 512*M
+MIN_RAM = 300*M
 
 def main():
     
-    folders = read_file(FOLDERS) 
+    files_read = set(read_file(FILES_READ))
     files = glob("../**/*.txt")
     print("FILES:", len(files))
     count = 1
 
-    with connect_db(DB, True) as conn:
+    with connect_db(DB, False) as conn:
 
     
         for file in files:
@@ -167,6 +181,12 @@ def main():
             if psutil.virtual_memory().free<MIN_RAM:
                 print("Running out of ram!")
                 break
+                
+            if file in files_read:
+            	continue
+            	
+            files_read.add(file)
+            add_to_file(FILES_READ, file)
             
             print(count,"/", len(files), file,              
                   psutil.virtual_memory().free//M)
@@ -174,19 +194,16 @@ def main():
             count += 1
             
             path_, file_ = path.split(file)
-            if path_ in folders: 
-                print("Skipping folder.") 
-                continue
-            
+                   
             try:
                 if not read_passwords(file, conn):
                     continue
-                folders.add(path_)
+                
             except Exception as e:
                 print("***Error reading file", file=stderr)
                 print(str(e), file=stderr)
         
-    save_file(FOLDERS, folders)  
+          
  
         
 if __name__ == "__main__": 

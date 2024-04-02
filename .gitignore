@@ -1,1 +1,7 @@
 *.txt
+errors*
+emails.db
+emails.db*
+error3
+files_read.data
+error*
