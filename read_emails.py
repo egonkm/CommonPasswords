@@ -10,26 +10,23 @@ Created on Sun Mar 31 22:29:38 2024
 # passwords file: #name@#host:password
 
 from glob import glob
-from os import path
-from sys import stderr, getsizeof
+from os import path 
+from sys import stderr
 import psutil
 import sqlite3
 
 FILES_READ = "files_read.data"
-DB = "emails.db"
+DB = "e-mails.db"
 
-def connect_db(file, reset=False):
+def connect_db(file, create=False):
+    
+    create = create or not path.exists(file)
     
     conn = sqlite3.connect(file)
     
-    if reset:
-        conn.execute("drop table if exists names ")
-        conn.execute("drop table if exists hosts")
+    if create:
         conn.execute("drop table if exists passwords")
-        conn.execute("create table names (id integer primary key autoincrement, name text)")
-        conn.execute("create table hosts ( id integer primary key autoincrement, host text)")
-        conn.execute("create table passwords (host integer, name integer, password text, primary key (host, name))")
-     
+        conn.execute("create table passwords (host text, name text, password text, primary key (host, name))")
     return conn
 
 
@@ -105,7 +102,7 @@ def read_passwords(file, conn):
             
             skip = False
             
-            for ignore in ["РІР‚ВР Р"]:
+            for ignore in ["РІР‚ВР"]:
                 
                 if ignore in line:
                     skip = True
@@ -117,18 +114,21 @@ def read_passwords(file, conn):
             
             if name is None: continue    
             
-            idx_name = get_val(conn, "names", "name", name)
-            idx_host = get_val(conn, "hosts", "host", host) 
-            
-            if not (idx_name and idx_host):
-                print("Error recovering values:", line)
-                continue
-            
-            conn.execute(
-                "insert into passwords values (?,?,?)",
-                (idx_host, idx_name, password))
-            
-    conn.commit()
+            try:
+                
+                if conn.execute(
+                    "Select host,name from passwords where host=? and name=? ",
+                    (host, name)
+                    ).fetchone(): continue
+                
+                conn.execute(
+                    "insert into passwords values (?,?,?)",
+                    (host, name, password))
+                
+            except sqlite3.DatabaseError as e:
+                print("Error inserting data:", line, str(e))
+                
+    
             
     return True
 
@@ -173,7 +173,7 @@ def main():
     print("FILES:", len(files))
     count = 1
 
-    with connect_db(DB, False) as conn:
+    with connect_db(DB, True) as conn:
 
     
         for file in files:
@@ -188,7 +188,7 @@ def main():
             files_read.add(file)
             add_to_file(FILES_READ, file)
             
-            print(count,"/", len(files), file,              
+            print(count,"/", len(files), file, path.getsize(file)/M,           
                   psutil.virtual_memory().free//M)
             
             count += 1
