@@ -16,7 +16,7 @@ import psutil
 import sqlite3
 
 FILES_READ = "files_read.data"
-DB = "e-mails.db"
+DB = "/home/egon/emails/e-mails.db"
 
 def connect_db(file, create=False):
     
@@ -170,17 +170,17 @@ def main():
     
     files_read = set(read_file(FILES_READ))
     files = glob("../**/*.txt")
-    print("FILES:", len(files))
+    #print("FILES:", len(files))
     count = 1
 
-    with connect_db(DB, True) as conn:
+    with connect_db(DB) as conn:
 
     
         for file in files:
         
             if psutil.virtual_memory().free<MIN_RAM:
                 print("Running out of ram!")
-                break
+                #break
                 
             if file in files_read:
             	continue
@@ -188,7 +188,8 @@ def main():
             files_read.add(file)
             add_to_file(FILES_READ, file)
             
-            print(count,"/", len(files), file, path.getsize(file)/M,           
+            print(count,"/", #len(files),
+             file, path.getsize(file)/M,           
                   psutil.virtual_memory().free//M)
             
             count += 1
