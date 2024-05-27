@@ -13,18 +13,12 @@ def main(min_count=100):
     with open("passwords.txt", "r") as f:
         for line in f:
              
-            line = line.strip()
-            if not line: continue
-
-            try:
-                k,v = line.split(", ")
-            except:
-                continue
-             
-            v = int(v)
-            if v>=min_count:
+            vals = line = line.strip().split(", ")
+            if len(vals) != 2: continue
+            k, v = vals
+            if int(v)>=min_count:
                 print(k, v)
              
 if __name__ == "__main__": 
 
-    main(1000)
+    main(10000)

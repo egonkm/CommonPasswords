@@ -1,7 +1,3 @@
-*.txt
-errors*
-emails.db
-emails.db*
-error3
-files_read.data
+e-mails.db
 error*
+passwords*.txt
